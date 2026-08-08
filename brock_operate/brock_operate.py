@@ -1,4 +1,3 @@
-
 import threading
 
 import rclpy
@@ -51,7 +50,6 @@ class BrockOperateNode(Node):
         # Service状態
         # =========================================================
 
-        # Service処理中か
         self.service_active = False
 
         # 現在処理している色
@@ -78,9 +76,6 @@ class BrockOperateNode(Node):
 
         # =========================================================
         # Callback Group
-        #
-        # Serviceが待機している間も
-        # brocks_info / control_loopを動かす
         # =========================================================
 
         self.callback_group = ReentrantCallbackGroup()
@@ -95,6 +90,18 @@ class BrockOperateNode(Node):
             self.on_brocks_info,
             10,
             callback_group=self.callback_group
+        )
+
+        # =========================================================
+        # brocks_info Publisher
+        #
+        # Service終了後に情報をリセットするために使用
+        # =========================================================
+
+        self.brocks_info_publisher = self.create_publisher(
+            String,
+            "brocks_info",
+            10
         )
 
         # =========================================================
@@ -230,11 +237,9 @@ class BrockOperateNode(Node):
             self.first_brock_visible = True
 
             if center_x is not None:
-
                 self.first_center_x = center_x
 
             if distance is not None:
-
                 self.first_distance = distance
 
     # =============================================================
@@ -291,6 +296,19 @@ class BrockOperateNode(Node):
             self.service_success = False
             self.service_distance = 0.0
 
+            # -----------------------------------------------------
+            # 前回の検出情報をリセット
+            #
+            # これが重要
+            #
+            # 前回center_x=320が残っていると、
+            # 2回目のServiceが即成功してしまうため。
+            # -----------------------------------------------------
+
+            self.first_brock_visible = False
+            self.first_center_x = 0.0
+            self.first_distance = 0.0
+
             # 完了Eventをリセット
             self.service_done.clear()
 
@@ -299,11 +317,8 @@ class BrockOperateNode(Node):
         # =========================================================
 
         if color == "red":
-
             opposite_color = "blue"
-
         else:
-
             opposite_color = "red"
 
         # =========================================================
@@ -331,9 +346,6 @@ class BrockOperateNode(Node):
 
         # =========================================================
         # 中央に到達するまで待つ
-        #
-        # この間もcontrol_loop()と
-        # on_brocks_info()は別スレッドで実行される
         # =========================================================
 
         while rclpy.ok():
@@ -341,7 +353,6 @@ class BrockOperateNode(Node):
             if self.service_done.wait(
                 timeout=0.1
             ):
-
                 break
 
         # =========================================================
@@ -353,8 +364,48 @@ class BrockOperateNode(Node):
             response.success = self.service_success
             response.distance = self.service_distance
 
+            result_distance = self.service_distance
+
             self.service_active = False
             self.current_color = None
+
+        # =========================================================
+        # 停止
+        # =========================================================
+
+        self.publish_stop()
+
+        # =========================================================
+        # brocks_infoをリセット
+        #
+        # Service完了時に
+        #
+        # distance=0.00
+        # tier=1
+        # model=red
+        # height=150
+        # center_x=0
+        #
+        # をPublishする
+        # =========================================================
+
+        reset_msg = String()
+
+        reset_msg.data = (
+            "distance=0.00,"
+            "tier=1,"
+            "model=red,"
+            "height=150,"
+            "center_x=0"
+        )
+
+        self.brocks_info_publisher.publish(
+            reset_msg
+        )
+
+        self.get_logger().info(
+            f"/brocks_info -> {reset_msg.data}"
+        )
 
         # =========================================================
         # 結果ログ
@@ -363,7 +414,7 @@ class BrockOperateNode(Node):
         self.get_logger().info(
             f"Service Response: "
             f"success={response.success}, "
-            f"distance={response.distance:.3f}"
+            f"distance={result_distance:.3f}"
         )
 
         return response
@@ -466,6 +517,7 @@ class BrockOperateNode(Node):
                 self.service_success = True
                 self.service_distance = distance
 
+                # 制御停止
                 self.service_active = False
                 self.current_color = None
 
@@ -532,7 +584,6 @@ class BrockOperateNode(Node):
     def publish_stop(self, twist=None):
 
         if twist is None:
-
             twist = Twist()
 
         twist.linear.x = 0.0
@@ -596,5 +647,5 @@ def main(args=None):
 # =============================================================
 
 if __name__ == "__main__":
-
     main()
+
