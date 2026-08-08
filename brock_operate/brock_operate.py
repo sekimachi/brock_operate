@@ -133,7 +133,7 @@ class BrockOperateNode(Node):
         # =========================================================
 
         self.timer = self.create_timer(
-            0.1,
+            0.01,
             self.control_loop,
             callback_group=self.callback_group
         )
