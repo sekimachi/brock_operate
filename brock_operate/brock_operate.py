@@ -376,17 +376,7 @@ class BrockOperateNode(Node):
         self.publish_stop()
 
         # =========================================================
-        # brocks_infoをリセット
-        #
-        # Service完了時に
-        #
-        # distance=0.00
-        # tier=1
-        # model=red
-        # height=150
-        # center_x=0
-        #
-        # をPublishする
+        # ねんのためbrocks_infoをリセット
         # =========================================================
 
         reset_msg = String()
