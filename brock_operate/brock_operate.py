@@ -24,11 +24,11 @@ class BrockOperateNode(Node):
         self.IMAGE_WIDTH = 640
 
         # 画面中心
-        self.CENTER_X = 320.0
+        self.CENTER_X = 640.0
 
         # 中心判定範囲
-        # 320 ± 10
-        self.CENTER_TOLERANCE = 10.0
+        # 620 <= center_x <= 660
+        self.CENTER_TOLERANCE = 20.0
 
         # 回転速度
         self.ROTATE_VEL = 0.1
