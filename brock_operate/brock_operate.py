@@ -20,14 +20,11 @@ class BrockOperateNode(Node):
         # パラメータ
         # =========================================================
 
-        # カメラ画像幅
-        self.IMAGE_WIDTH = 640
-
         # 画面中心
-        self.CENTER_X = 640.0
+        self.CENTER_X = 960.0
 
         # 中心判定範囲
-        # 620 <= center_x <= 660
+        # 940 <= center_x <= 980
         self.CENTER_TOLERANCE = 20.0
 
         # =========================================================
@@ -38,7 +35,7 @@ class BrockOperateNode(Node):
         self.ROTATE_MIN = 0.1
 
         # 最大回転速度
-        self.ROTATE_MAX = 0.7
+        self.ROTATE_MAX = 0.5
 
         # Pゲイン
         self.KP = 0.001
