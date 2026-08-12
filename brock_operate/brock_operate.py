@@ -30,8 +30,18 @@ class BrockOperateNode(Node):
         # 620 <= center_x <= 660
         self.CENTER_TOLERANCE = 20.0
 
-        # 回転速度
-        self.ROTATE_VEL = 0.1
+        # =========================================================
+        # 回転速度 P制御
+        # =========================================================
+
+        # 最小回転速度
+        self.ROTATE_MIN = 0.1
+
+        # 最大回転速度
+        self.ROTATE_MAX = 0.7
+
+        # Pゲイン
+        self.KP = 0.001
 
         # =========================================================
         # brocks_info
@@ -151,6 +161,12 @@ class BrockOperateNode(Node):
 
         self.get_logger().info(
             "brock_operate started"
+        )
+
+        self.get_logger().info(
+            f"P制御: KP={self.KP}, "
+            f"ROTATE_MIN={self.ROTATE_MIN}, "
+            f"ROTATE_MAX={self.ROTATE_MAX}"
         )
 
     # =============================================================
@@ -309,7 +325,10 @@ class BrockOperateNode(Node):
             self.first_center_x = 0.0
             self.first_distance = 0.0
 
+            # -----------------------------------------------------
             # 完了Eventをリセット
+            # -----------------------------------------------------
+
             self.service_done.clear()
 
         # =========================================================
@@ -448,7 +467,7 @@ class BrockOperateNode(Node):
             # 常に右回転
             # -----------------------------------------------------
 
-            twist.angular.z = -self.ROTATE_VEL
+            twist.angular.z = -self.ROTATE_MAX
 
             self.cmd_vel_publisher.publish(
                 twist
@@ -479,7 +498,7 @@ class BrockOperateNode(Node):
         # =========================================================
         # 中央判定
         #
-        # 310 <= center_x <= 330
+        # 620 <= center_x <= 660
         # =========================================================
 
         if abs(dx) <= self.CENTER_TOLERANCE:
@@ -528,21 +547,39 @@ class BrockOperateNode(Node):
             return
 
         # =========================================================
+        # P制御による回転速度計算
+        # =========================================================
+
+        rotate_vel = abs(dx) * self.KP
+
+        # =========================================================
+        # 回転速度を0.1～0.5に制限
+        # =========================================================
+
+        rotate_vel = max(
+            self.ROTATE_MIN,
+            min(rotate_vel, self.ROTATE_MAX)
+        )
+
+        # =========================================================
         # ブロックが左
         #
-        # center_x < 320
+        # center_x < CENTER_X
         # =========================================================
 
         if center_x < self.CENTER_X:
 
-            twist.angular.z = self.ROTATE_VEL
+            twist.angular.z = rotate_vel
 
             self.cmd_vel_publisher.publish(
                 twist
             )
 
             self.get_logger().info(
-                f"左回転: center_x={center_x:.1f}"
+                f"左回転: "
+                f"center_x={center_x:.1f}, "
+                f"dx={dx:.1f}, "
+                f"rotate_vel={rotate_vel:.3f}"
             )
 
             return
@@ -550,19 +587,22 @@ class BrockOperateNode(Node):
         # =========================================================
         # ブロックが右
         #
-        # center_x > 320
+        # center_x > CENTER_X
         # =========================================================
 
         if center_x > self.CENTER_X:
 
-            twist.angular.z = -self.ROTATE_VEL
+            twist.angular.z = -rotate_vel
 
             self.cmd_vel_publisher.publish(
                 twist
             )
 
             self.get_logger().info(
-                f"右回転: center_x={center_x:.1f}"
+                f"右回転: "
+                f"center_x={center_x:.1f}, "
+                f"dx={dx:.1f}, "
+                f"rotate_vel={rotate_vel:.3f}"
             )
 
             return
@@ -638,4 +678,3 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
-
